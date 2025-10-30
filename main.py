@@ -19,8 +19,6 @@ z = []
 t = []
 
 for packet in srad_data["packets"]:
-    print("------------------------ NEW PACKET ------------------------")
-
     first_sample = packet['samples'][0]
     last_sample = packet['samples'][-1]
 
@@ -37,10 +35,13 @@ for packet in srad_data["packets"]:
     vel_y = (last_sample_y - first_sample_y) / delta_t
     vel_z = (last_sample_z - first_sample_z) / delta_t
 
-    # FLIP X AND Z since accelerometer mounted sideways. TODO: Change this to a positional based.
+    # FLIP X AND Z since accelerometer mounted sideways. TODO: Change this to a positional (integrate twice) based.
     acc_x = last_sample['acc_z']
     acc_y = last_sample['acc_y']
     acc_z = last_sample['acc_x']
+    # vel_x = last_sample["vel_z"]
+    # vel_y = last_sample["vel_y"]
+    # vel_z = last_sample["vel_x"]
 
     # Store original GPS data
     x_gps.append(last_sample_x)
