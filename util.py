@@ -90,9 +90,9 @@ def generate_srad_data(folder_path):
         return False
 
     alt = pandas.read_csv(folder_path + "/altitude_sea_level.csv")
+    alt = alt[alt["metres"].apply(has_min_2_decimals)]
     vel = pandas.read_csv(folder_path + "/angular_velocity.csv")
-    raw_acc = pandas.read_csv(folder_path + "/linear_acceleration.csv")
-    acc = raw_acc[raw_acc["magnitude"].apply(has_min_2_decimals)]
+    acc = pandas.read_csv(folder_path + "/linear_acceleration.csv")
     pos = pandas.read_csv(folder_path + "/gnss.csv")
 
     # Get time range
@@ -181,3 +181,39 @@ def generate_srad_data(folder_path):
     print(f"Saved to srad_data.json")
     
     return srad_data
+
+
+def is_outlier_iqr(value, data, multiplier=1.5):
+    """
+    Check if a single value is an outlier compared to a dataset.
+    
+    Parameters:
+    -----------
+    value : float
+        The value to check
+    data : array-like
+        The reference dataset
+    multiplier : float, default=1.5
+        IQR multiplier (1.5 = standard, 3.0 = extreme outliers only)
+    
+    Returns:
+    --------
+    is_outlier : bool
+        True if the value is an outlier
+    bounds : tuple
+        (lower_bound, upper_bound)
+    """
+    data = np.array(data)
+    
+    Q1 = np.percentile(data, 25)
+    Q3 = np.percentile(data, 75)
+    IQR = Q3 - Q1
+    
+    lower_bound = Q1 - multiplier * IQR
+    upper_bound = Q3 + multiplier * IQR
+    
+    is_outlier = (value < lower_bound) or (value > upper_bound)
+    
+    return is_outlier, (lower_bound, upper_bound)
+
+# generate_srad_data("./srad")
