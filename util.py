@@ -180,7 +180,69 @@ def generate_srad_data(folder_path):
     print(f"Generated {len(packets)} packets with 10 samples each")
     print(f"Saved to srad_data.json")
     
+    # Also export a flat CSV (one row per sample) for easier analysis / ingestion
+    # CSV columns: packet_timestamp,time,lat,lon,alt,acc_x,acc_y,acc_z,acc_mag,vel_x,vel_y,vel_z,vel_mag
+    csv_rows = []
+    for pkt in packets:
+        pkt_ts = pkt['timestamp']
+        for samp in pkt['samples']:
+            row = {
+                'packet_timestamp': pkt_ts,
+                'time': samp.get('time', 0.0),
+                'lat': samp.get('lat', 0.0),
+                'lon': samp.get('lon', 0.0),
+                'alt': samp.get('alt', 0.0),
+                'acc_x': samp.get('acc_x', 0.0),
+                'acc_y': samp.get('acc_y', 0.0),
+                'acc_z': samp.get('acc_z', 0.0),
+                'acc_mag': samp.get('acc_mag', 0.0),
+                'vel_x': samp.get('vel_x', 0.0),
+                'vel_y': samp.get('vel_y', 0.0),
+                'vel_z': samp.get('vel_z', 0.0),
+                'vel_mag': samp.get('vel_mag', 0.0)
+            }
+            csv_rows.append(row)
+
+    try:
+        df = pandas.DataFrame(csv_rows)
+        df.to_csv('srad_data.csv', index=False)
+        print(f"Saved flat CSV to srad_data.csv ({len(csv_rows)} rows)")
+
+        # Also export separate CSVs for GPS, accelerometer, and velocity data
+        # GPS: csvpacket_timestamp,time,lat,lon,alt
+        gps_cols = ['csvpacket_timestamp', 'time', 'lat', 'lon', 'alt']
+        acc_cols = ['csvpacket_timestamp', 'time', 'acc_x', 'acc_y', 'acc_z', 'acc_mag']
+        vel_cols = ['csvpacket_timestamp', 'time', 'vel_x', 'vel_y', 'vel_z', 'vel_mag']
+
+        # Export GPS
+        try:
+            gps_df = df[gps_cols]
+            gps_df.to_csv('srad_gps.csv', index=False)
+            print(f"Saved GPS CSV to srad_gps.csv ({len(gps_df)} rows)")
+        except Exception as e:
+            print(f"Warning: failed to write srad_gps.csv: {e}")
+
+        # Export accelerometer
+        try:
+            acc_df = df[acc_cols]
+            acc_df.to_csv('srad_acc.csv', index=False)
+            print(f"Saved accelerometer CSV to srad_acc.csv ({len(acc_df)} rows)")
+        except Exception as e:
+            print(f"Warning: failed to write srad_acc.csv: {e}")
+
+        # Export velocity
+        try:
+            vel_df = df[vel_cols]
+            vel_df.to_csv('srad_vel.csv', index=False)
+            print(f"Saved velocity CSV to srad_vel.csv ({len(vel_df)} rows)")
+        except Exception as e:
+            print(f"Warning: failed to write srad_vel.csv: {e}")
+
+    except Exception as e:
+        print(f"Warning: failed to write srad_data.csv: {e}")
+
     return srad_data
+    
 
 
 def is_outlier_iqr(value, data, multiplier=1.5):
