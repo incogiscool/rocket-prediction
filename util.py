@@ -216,4 +216,55 @@ def is_outlier_iqr(value, data, multiplier=1.5):
     
     return is_outlier, (lower_bound, upper_bound)
 
+
+def check_velocity_outliers(new_vel_x, new_vel_y, new_vel_z, vel_x, vel_y, vel_z, timestamp, multiplier=5000.0, history_length=20):
+    """
+    Check if calculated velocities are outliers and return corrected values.
+    
+    Parameters:
+    -----------
+    new_vel_x, new_vel_y, new_vel_z : float
+        The newly calculated velocities to check
+    vel_x, vel_y, vel_z : list
+        Historical velocity arrays
+    timestamp : float
+        Current timestamp for logging
+    multiplier : float, default=5000.0
+        IQR multiplier for outlier detection
+    history_length : int, default=20
+        Number of historical points to consider
+    
+    Returns:
+    --------
+    corrected_vel_x, corrected_vel_y, corrected_vel_z : float
+        Velocities with outliers replaced by previous values
+    """
+    corrected_vel_x = new_vel_x
+    corrected_vel_y = new_vel_y
+    corrected_vel_z = new_vel_z
+    
+    # Check velocity X outlier
+    if len(vel_x) >= history_length:
+        is_outlier_vx, (lower_vx, upper_vx) = is_outlier_iqr(new_vel_x, vel_x[-history_length:], multiplier)
+        if is_outlier_vx:
+            print(f"VELOCITY X OUTLIER at timestamp {timestamp}: {new_vel_x:.2f} m/s -> using previous {vel_x[-1]:.2f} m/s")
+            corrected_vel_x = vel_x[-1]
+    
+    # Check velocity Y outlier
+    if len(vel_y) >= history_length:
+        is_outlier_vy, (lower_vy, upper_vy) = is_outlier_iqr(new_vel_y, vel_y[-history_length:], multiplier)
+        if is_outlier_vy:
+            print(f"VELOCITY Y OUTLIER at timestamp {timestamp}: {new_vel_y:.2f} m/s -> using previous {vel_y[-1]:.2f} m/s")
+            corrected_vel_y = vel_y[-1]
+    
+    # Check velocity Z outlier
+    if len(vel_z) >= history_length:
+        is_outlier_vz, (lower_vz, upper_vz) = is_outlier_iqr(new_vel_z, vel_z[-history_length:], multiplier)
+        if is_outlier_vz:
+            print(f"VELOCITY Z OUTLIER at timestamp {timestamp}: {new_vel_z:.2f} m/s -> using previous {vel_z[-1]:.2f} m/s")
+            corrected_vel_z = vel_z[-1]
+    
+    return corrected_vel_x, corrected_vel_y, corrected_vel_z
+
+
 # generate_srad_data("./srad")
