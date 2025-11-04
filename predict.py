@@ -1,6 +1,30 @@
 import formulas
 import util
 import utm
+from kalman_filter import KalmanFilter
+
+
+# Initialize Kalman filter (will be initialized on first valid packet)
+# The Kalman filter fuses GPS position measurements with accelerometer data
+# to estimate current state and predict future positions
+kf = KalmanFilter(dt=1.0, process_noise=0.5, measurement_noise=5.0)
+
+# Sensor delay compensation: GPS/sensor data is 2 seconds delayed
+# The Kalman filter predicts 2 seconds ahead to compensate for this delay
+SENSOR_DELAY = 2.0  # 2 second delay in sensor data
+
+
+def set_sensor_delay(delay_seconds):
+    """
+    Set the sensor delay for future predictions.
+    
+    Parameters:
+    -----------
+    delay_seconds : float
+        Delay in seconds (default 2.0)
+    """
+    global SENSOR_DELAY
+    SENSOR_DELAY = delay_seconds
 
 
 def process_packet(packet, x, y, z, t, vel_x, vel_y, vel_z, acc_x, acc_y, acc_z, x_gps, y_gps, z_gps, t_gps):
@@ -110,14 +134,42 @@ def process_packet(packet, x, y, z, t, vel_x, vel_y, vel_z, acc_x, acc_y, acc_z,
     acc_y.append(last_sample['acc_y'])
     acc_z.append(last_sample['acc_x'])
     
-    # Store GPS data
+    # Store GPS data (this is 2 seconds old data)
     x_gps.append(last_sample_x)
     y_gps.append(last_sample_y)
     z_gps.append(last_sample['alt'])
     t_gps.append(last_sample['time'])
-
-    # Store current position
-    x.append(last_sample_x)
-    y.append(last_sample_y)
-    z.append(last_sample['alt'])
-    t.append(last_sample['time'])
+    
+    # Initialize Kalman filter on first valid packet
+    if not kf.initialized:
+        kf.initialize(
+            position=[last_sample_x, last_sample_y, last_sample['alt']],
+            velocity=[new_vel_x, new_vel_y, new_vel_z]
+        )
+        # For initialization, predict forward to current time (sensor_time + delay)
+        acceleration = [acc_x[-1], acc_y[-1], acc_z[-1]]
+        current_state = kf.predict_future(SENSOR_DELAY, acceleration)
+        
+        x.append(current_state[0])
+        y.append(current_state[1])
+        z.append(current_state[2])
+        t.append(last_sample['time'] + SENSOR_DELAY)  # Current time = sensor time + delay
+        return
+    
+    # The incoming data is 2 seconds old
+    # Step 1: Predict from last state to the delayed measurement time
+    acceleration = [acc_x[-1], acc_y[-1], acc_z[-1]]
+    predicted_state = kf.predict(acceleration)
+    
+    # Step 2: Update with the delayed GPS measurement
+    measurement = [last_sample_x, last_sample_y, last_sample['alt']]
+    updated_state = kf.update(measurement)
+    
+    # Step 3: Predict forward from measurement time to current time (2 seconds ahead)
+    current_state = kf.predict_future(SENSOR_DELAY, acceleration)
+    
+    # Store current position estimate (compensated for 2-second delay)
+    x.append(current_state[0])
+    y.append(current_state[1])
+    z.append(current_state[2])
+    t.append(last_sample['time'] + SENSOR_DELAY)  # Current time = sensor time + delay

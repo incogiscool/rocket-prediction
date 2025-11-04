@@ -4,6 +4,24 @@ import utm
 import plot
 import predict
 
+"""
+Rocket Trajectory Prediction System with Kalman Filtering
+
+This system processes delayed sensor data (GPS + accelerometer) to predict
+the rocket's current position accounting for a 2-second sensor delay.
+
+Key Features:
+1. Kalman Filter: Fuses GPS and accelerometer data for optimal state estimation
+2. Delay Compensation: Predicts 2 seconds ahead to account for sensor latency
+3. Outlier Detection: Filters out erroneous velocity measurements from glitchy GPS
+4. Position Interpolation: Generates 10 sub-samples per second between GPS updates
+
+The Kalman filter maintains a state vector [x, y, z, vx, vy, vz] and uses:
+- Predict step: Uses accelerometer data to predict forward in time
+- Update step: Corrects prediction with GPS measurements
+- Future prediction: Compensates for 2-second delay by extrapolating ahead
+"""
+
 # Load sensor data
 srad_data = util.parse_json("./srad_data.json")
 
